@@ -1,23 +1,23 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Reactive.Subjects;
 using System.Reactive.Disposables;
 using System.Collections.Generic;
-using System.Threading;
 
 public class CountableSubject<T> : ISubject<T>, IGenericSubject
 {
-    private readonly ISubject<T> baseSubject;
+    private readonly ISubject<T> _baseSubject;
 
-    private List<IDisposable> disposables = new List<IDisposable>();
+    private List<IDisposable> _disposables = new List<IDisposable>();
 
-    private int counter;
+    private int _counter;
 
     public int Count
     {
         get
         {
-            return counter;
+            return _counter;
         }
     }
 
@@ -25,50 +25,50 @@ public class CountableSubject<T> : ISubject<T>, IGenericSubject
 
     public CountableSubject(ISubject<T> baseSubject)
     {
-        this.baseSubject = baseSubject;
+        _baseSubject = baseSubject;
     }
 
     public IDisposable Subscribe(IObserver<T> observer)
     {
         Interlocked.Increment(ref counter);
 
-        IDisposable subscriptionDisposable = baseSubject.Subscribe(observer);
+        IDisposable subscriptionDisposable = _baseSubject.Subscribe(observer);
 
         CompositeDisposable compositeDisposable = new CompositeDisposable()
         {
             subscriptionDisposable,
             Disposable.Create(() => Interlocked.Decrement(ref counter)),
-            Disposable.Create(() => disposables.Remove(subscriptionDisposable))
+            Disposable.Create(() => _disposables.Remove(subscriptionDisposable))
         };
 
-        disposables.Add(compositeDisposable);
+        _disposables.Add(compositeDisposable);
 
         return compositeDisposable;
     }
 
     public void OnNext(T value)
     {
-        baseSubject.OnNext(value);
+        _baseSubject.OnNext(value);
     }
 
     public void OnNext(object value)
     {
-        baseSubject.OnNext((T) value);
+        _baseSubject.OnNext((T) value);
     }
 
     public void OnCompleted()
     {
-        baseSubject.OnCompleted();
+        _baseSubject.OnCompleted();
     }
 
     public void OnError(Exception error)
     {
-        baseSubject.OnError(error);
+        _baseSubject.OnError(error);
     }
 
     public void DisposeAll()
     {
-        foreach (IDisposable disposable in disposables.ToList())
+        foreach (IDisposable disposable in _disposables)
         {
             disposable.Dispose();
         }
